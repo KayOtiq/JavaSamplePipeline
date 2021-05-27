@@ -1,0 +1,159 @@
+@Library("globalLibrary@develop") _
+
+import Constants
+
+def gv
+
+pipeline {
+    agent any
+
+    tools {
+        // Note: this should match with the tool name configured in your jenkins instance (JENKINS_URL/configureTools/)
+        maven "Maven 3.6.3"
+        jdk  "Java JDK 8"
+    }
+    options {
+        //Sets the number of build to keep
+         buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
+         timestamps()
+         retry(3)
+         timeout(time: 1, unit: 'HOURS')
+    }
+
+    environment {
+    // **********************************
+    // ****  USER DEFINED VARIABLES  ****
+    // **********************************
+
+        //Build Variables
+        VERSION = "1.1.1"
+        ARTIFACT_ID = 'JavaSamplePipeline'
+        GROUP_ID = 'io.kayotiq.Java'
+        PACKAGING = 'jar'
+        PUBLISH_PATH = "${WORKSPACE}\\target\\${ARTIFACT_ID}-${VERSION}-SNAPSHOT.${PACKAGING}"
+
+        //SonarQube Variables
+        SQ_PROJECT_KEY = "${ARTIFACT_ID}"
+        SQ_PROJECT_NAME = "${ARTIFACT_ID}"
+
+        //Nexus IQ Policy Evaluation Variables
+        NEXUS_IQ_NAME = "${ARTIFACT_ID}"  //IQ Application name; must be added to Nexus IQ prior to pipeline run to complete successfully
+        NEXUS_IQ_STAGE = "build"  //default stages are 'build', 'stage-release',  'release',  'operate'        
+
+        //Git Repository Variables
+        GIT_URL = Constant.GIT_URL
+
+        EMAIL_RESULTS = "Lynda@kotiq.io" //send me a copy of the email results
+
+    }
+
+    stages {
+        stage(" Initialize ") {
+            steps {
+                script {
+                    echo "Initialization...."
+                    gv = load "pipelineLibrary.groovy"  
+                    log.separator()
+                }
+                deleteDir() //delete the workspace
+                
+            }
+        }
+        stage(" Source ") {
+            steps {
+                script {
+                    sharedLibrary.getSourceGit()
+                    log.separator()
+                }
+            }
+        }
+        stage(" Info ") {
+            steps {
+                script {
+                    sharedLibrary.displayInfo()
+                    log.separator()
+                }
+            }
+        }
+        stage(" Maven Clean & Run Unit Tests") {
+            steps {
+                script {
+                    bat "mvn clean test -Drevision='${VERSION}-SNAPSHOT'" // --settings settings.xml"
+                   log.separator()
+                }
+            }
+        }
+        
+        stage(" Maven Sonar Scan ") {
+            steps {
+                script {
+                    //sharedLibrary.runSonarScanMaven()
+
+                    withSonarQubeEnv(credentialsId: Constant.SQ_CREDENTIALS_ID, installationName: Constant.SQ_INSTALLATION_NAME) {
+
+                        bat "mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent verify sonar:sonar \
+                            -Dsonar.projectKey=${SQ_PROJECT_KEY} \
+                            -Dsonar.projectName=${SQ_PROJECT_NAME} \
+                            -Dsonar.projectVersion=${VERSION}"
+                        }
+                    log.separator()
+                }
+            }
+        }
+         
+        
+       
+        stage("Nexus IQ Scan") {
+            steps {
+                script{
+                    sharedLibrary.runNexusIQScan()
+                    log.separator()
+                }
+            }
+        }   
+        stage(" Maven Package Project") {
+            steps {
+                script {
+                    bat "mvn -Dmaven.test.skip=true package -Drevision='${VERSION}-SNAPSHOT'" // --settings settings.xml"
+                    //gv.runMavenPackageProject
+                    log.separator()
+                }
+            }
+        }
+
+        stage(" Publish ") {
+            steps {
+                script {
+                    sharedLibrary.runNexusPublish()
+                    log.separator()
+                }
+            }
+        }
+
+        stage('Results') {
+            steps {
+                script{
+                    sharedLibrary.postMavenResults()
+                    log.separator()
+                }
+            }
+        }
+
+    } //stages
+
+    post {
+        always {
+             //publishes the unit test results to Jenkins
+             script{ log.message ("post action publish steps") }
+            //junit "target\\surefire-reports\\*.xml"
+        }
+        success {
+            echo "this runs after each successful build..."
+        }
+        failure {
+            echo "This runs after each failed build ..."
+        }
+        //can also have Build Status or Build Status Changes
+    }
+
+}

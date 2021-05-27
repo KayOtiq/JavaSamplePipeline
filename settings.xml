@@ -1,0 +1,94 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                      https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <mirrors>
+        <mirror>
+            <!--Points mirror to IS Server -->
+            <id>Nexus-IS</id>
+            <name>Nexus Public Mirror</name>
+            <url>http://nxrepo1:8081/repository/maven-group/</url>
+            <mirrorOf>*</mirrorOf>
+        </mirror>
+    </mirrors>
+
+    <profiles>
+        <profile>
+            <id>Nexus-IS</id>
+            <!--Override the repository (and pluginRepository) "central" from the
+         Maven Super POM -->
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <url>http://repo1.maven.org/maven2</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+					<id>Nexus-IS</id>
+					<name>Corporate Artifact Repository</name>
+					<url>https://nxrepo1/repository/maven-public</url>
+					<layout>default</layout>
+				</repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+					<id>Nexus-IS</id>
+					<name>Artifact Repository</name>
+					<url>https://nxrepo1/repository/maven-public</url>
+					<layout>default</layout>
+				</pluginRepository>
+                <pluginRepository>
+                    <id>central</id>
+                    <url>http://repo1.maven.org/maven2</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+        <profile>
+            <id>sonar-is</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!-- Optional URL to server. Default value is http://localhost:9000 -->
+                <sonar.host.url>
+                  http://http://sonarqube01:9000
+                </sonar.host.url>
+            </properties>
+        </profile>
+
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>Nexus-IS</activeProfile>
+    </activeProfiles>
+
+    <pluginGroups>
+        <pluginGroup>org.sonatype.plugins</pluginGroup>
+        <pluginGroup>org.sonarsource.scanner.maven</pluginGroup>
+    </pluginGroups>
+
+    <servers>
+        <server>
+            <id>Nexus-IS</id>
+            <username>admin</username>
+            <password>P@ssword123!</password>
+        </server>
+        <server>
+			<id>corporate-artifact-repository</id>
+			<username>${nexusUser}</username>
+			<password>${nexusPW}</password>
+		</server>
+    </servers>
+
+</settings>

@@ -1,0 +1,16 @@
+pipeline {
+    agent any
+    environment {
+        POM_APP = readMavenPom().getProperties().getProperty('app')
+    }
+
+    stages {
+        stage('Pom Apps') {
+            steps {
+                script{
+                    bat """echo ${POM_APP}"""
+                }
+            }
+        }
+    }
+}

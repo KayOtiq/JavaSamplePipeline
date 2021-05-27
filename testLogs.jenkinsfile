@@ -1,0 +1,14 @@
+@Library('globalLibrary') _
+def log = new logLibrary()
+pipeline {
+    agent any
+    stages{
+        stage("test log separator"){
+            steps{
+                echo "testing the log separator - beginning"
+                log.separator()
+                echo "Finished!"
+            }
+        }
+    }
+}
